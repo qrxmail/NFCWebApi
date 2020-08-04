@@ -4,9 +4,9 @@ using System.ComponentModel.DataAnnotations;
 namespace NFCWebApi.Models
 {
     /// <summary>
-    /// 巡检点
+    /// 设备和巡检项目关系表：多对多关系
     /// </summary>
-    public class Inspect
+    public class DeviceInspectItem
     {
         /// <summary>
         /// 主键
@@ -15,24 +15,14 @@ namespace NFCWebApi.Models
         public Guid GId { get; set; }
 
         /// <summary>
-        /// 巡检点编号
+        /// 设备编号
         /// </summary>
-        public string InspectNo { get; set; }
+        public string DeviceNo { get; set; }
 
         /// <summary>
-        /// 巡检点名称
+        /// 巡检项目编号
         /// </summary>
-        public string InspectName { get; set; }
-
-        /// <summary>
-        /// 巡检顺序号
-        /// </summary>
-        public int InspectOrderNo { get; set; }
-
-        /// <summary>
-        /// 备注
-        /// </summary>
-        public string Remark { get; set; }
+        public string InspectItemNo { get; set; }
 
         /// <summary>
         /// 创建时间
@@ -43,17 +33,27 @@ namespace NFCWebApi.Models
         /// 创建人
         /// </summary>
         public string CreateUser { get; set; }
+    }
+
+    /// <summary>
+    /// 设备新增多个巡检项目的模型
+    /// </summary>
+    public class DeviceInspectItemAddModel
+    {
+        /// <summary>
+        /// 设备编号
+        /// </summary>
+        public string DeviceNo { get; set; }
 
         /// <summary>
-        /// 最后更新时间
+        /// 巡检项目编号多个
         /// </summary>
-        public DateTime LastUpdateTime { get; set; }
+        public string[] InspectItemNos { get; set; }
 
         /// <summary>
-        /// 更新人
+        /// 创建人
         /// </summary>
-        public string LastUpdateUser { get; set; }
-
+        public string CreateUser { get; set; }
 
     }
 }

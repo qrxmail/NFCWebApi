@@ -16,6 +16,16 @@ namespace NFCWebApi.Models
         public Guid GId { get; set; }
 
         /// <summary>
+        /// 任务ID
+        /// </summary>
+        public Guid TaskId { get; set; }
+
+        /// <summary>
+        /// 任务编号
+        /// </summary>
+        public string TaskNo { get; set; }
+
+        /// <summary>
         /// 巡检点编号
         /// </summary>
         public string InspectNo { get; set; }
@@ -26,14 +36,14 @@ namespace NFCWebApi.Models
         public string DeviceNo { get; set; }
 
         /// <summary>
-        /// 巡检项目名称
+        /// 巡检项目编号
         /// </summary>
-        public string InspectItemName { get; set; }
+        public string InspectItemNo { get; set; }
 
         /// <summary>
         /// 巡检结果值
         /// </summary>
-        public string ResultValue { get; set; }
+        public double ResultValue { get; set; }
 
         /// <summary>
         /// 是否跳检
@@ -59,6 +69,26 @@ namespace NFCWebApi.Models
         /// 备注
         /// </summary>
         public string Remark { get; set; }
+
+        /// <summary>
+        /// 创建时间
+        /// </summary>
+        public DateTime CreateTime { get; set; }
+
+        /// <summary>
+        /// 创建人
+        /// </summary>
+        public string CreateUser { get; set; }
+
+        /// <summary>
+        /// 最后更新时间
+        /// </summary>
+        public DateTime LastUpdateTime { get; set; }
+
+        /// <summary>
+        /// 更新人
+        /// </summary>
+        public string LastUpdateUser { get; set; }
 
     }
 }

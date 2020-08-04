@@ -3,11 +3,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NFCWebApi.Models
 {
-
     /// <summary>
-    /// 巡检项目
+    /// 巡检路线
     /// </summary>
-    public class InspectItems
+    public class InspectLine
     {
         /// <summary>
         /// 主键
@@ -16,24 +15,20 @@ namespace NFCWebApi.Models
         public Guid GId { get; set; }
 
         /// <summary>
-        /// 巡检项目编号
+        /// 路线名称
         /// </summary>
-        public string InspectItemNo { get; set; }
+        public string LineName { get; set; }
 
         /// <summary>
-        /// 巡检项目名称
+        /// 设备巡检项目（存多个，以逗号分隔，DeivceInspectItem表的主键）
         /// </summary>
-        public string InspectItemName { get; set; }
+        public string DeviceInspectItems { get; set; }
 
         /// <summary>
-        /// 值类型
+        /// 设备巡检项目名称
         /// </summary>
-        public string ValueType { get; set; }
+        public string DeviceInspectItemsName { get; set; }
 
-        /// <summary>
-        /// 数量单位
-        /// </summary>
-        public string Unit { get; set; }
 
         /// <summary>
         /// 备注
@@ -59,6 +54,7 @@ namespace NFCWebApi.Models
         /// 更新人
         /// </summary>
         public string LastUpdateUser { get; set; }
+
+
     }
-   
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NFCWebApi.Models;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -9,9 +10,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NFCWebApi.Migrations
 {
     [DbContext(typeof(NFCContext))]
-    partial class NFCContextModelSnapshot : ModelSnapshot
+    [Migration("20200708093749_UpdateInspectData")]
+    partial class UpdateInspectData
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -46,7 +48,7 @@ namespace NFCWebApi.Migrations
                     b.Property<string>("DeviceType")
                         .HasColumnType("text");
 
-                    b.Property<string>("InspectNo")
+                    b.Property<string>("InspectionNo")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("LastUpdateTime")
@@ -116,8 +118,8 @@ namespace NFCWebApi.Migrations
                     b.Property<string>("InspectNo")
                         .HasColumnType("text");
 
-                    b.Property<int>("InspectOrderNo")
-                        .HasColumnType("integer");
+                    b.Property<string>("InspectOrderNo")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("LastUpdateTime")
                         .HasColumnType("timestamp without time zone");
@@ -139,22 +141,10 @@ namespace NFCWebApi.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreateTime")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("CreateUser")
-                        .HasColumnType("text");
-
                     b.Property<string>("CycleName")
                         .HasColumnType("text");
 
                     b.Property<string>("CycleType")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("LastUpdateTime")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("LastUpdateUser")
                         .HasColumnType("text");
 
                     b.Property<string>("Remark")
@@ -207,11 +197,8 @@ namespace NFCWebApi.Migrations
                     b.Property<string>("Remark")
                         .HasColumnType("text");
 
-                    b.Property<double>("ResultValue")
-                        .HasColumnType("double precision");
-
-                    b.Property<Guid>("TaskId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("ResultValue")
+                        .HasColumnType("text");
 
                     b.Property<string>("TaskNo")
                         .HasColumnType("text");
@@ -259,41 +246,6 @@ namespace NFCWebApi.Migrations
                     b.ToTable("InspectItems");
                 });
 
-            modelBuilder.Entity("NFCWebApi.Models.InspectLine", b =>
-                {
-                    b.Property<Guid>("GId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreateTime")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("CreateUser")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DeviceInspectItems")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DeviceInspectItemsName")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("LastUpdateTime")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("LastUpdateUser")
-                        .HasColumnType("text");
-
-                    b.Property<string>("LineName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Remark")
-                        .HasColumnType("text");
-
-                    b.HasKey("GId");
-
-                    b.ToTable("InspectLine");
-                });
-
             modelBuilder.Entity("NFCWebApi.Models.InspectTask", b =>
                 {
                     b.Property<Guid>("GId")
@@ -336,9 +288,6 @@ namespace NFCWebApi.Migrations
                     b.Property<string>("LastUpdateUser")
                         .HasColumnType("text");
 
-                    b.Property<string>("LineName")
-                        .HasColumnType("text");
-
                     b.Property<string>("Remark")
                         .HasColumnType("text");
 
@@ -348,8 +297,8 @@ namespace NFCWebApi.Migrations
                     b.Property<string>("TaskNo")
                         .HasColumnType("text");
 
-                    b.Property<int>("TaskOrderNo")
-                        .HasColumnType("integer");
+                    b.Property<string>("TaskOrderNo")
+                        .HasColumnType("text");
 
                     b.HasKey("GId");
 

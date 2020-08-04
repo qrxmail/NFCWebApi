@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace NFCWebApi.Models
@@ -32,7 +33,7 @@ namespace NFCWebApi.Models
         /// <summary>
         /// 巡检点编号
         /// </summary>
-        public string InspectionNo { get; set; }
+        public string InspectNo { get; set; }
 
         /// <summary>
         /// 设备类型
@@ -89,6 +90,15 @@ namespace NFCWebApi.Models
         /// </summary>
         public string LastUpdateUser { get; set; }
       
+    }
+
+    /// <summary>
+    /// 设置设备巡检项目，巡检项目下拉框所需的数据模型
+    /// </summary>
+    public class DeviceInspectItemsDDLData
+    {
+        public List<string> DeviceInspectItemNos { get; set; }
+        public List<InspectItems> InspectItems { get; set; }
     }
     
 }

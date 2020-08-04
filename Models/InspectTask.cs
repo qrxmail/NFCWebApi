@@ -25,19 +25,44 @@ namespace NFCWebApi.Models
         public string DeviceNo { get; set; }
 
         /// <summary>
-        /// 巡检项目名称
+        /// 巡检项目编号
         /// </summary>
-        public string InspectItemName { get; set; }
+        public string InspectItemNo { get; set; }
 
         /// <summary>
         /// 任务顺序号
         /// </summary>
-        public string TaskOrderNo { get; set; }
+        public int TaskOrderNo { get; set; }
+
+        /// <summary>
+        /// 任务编号
+        /// </summary>
+        public string TaskNo { get; set; }
 
         /// <summary>
         /// 任务名称
         /// </summary>
         public string TaskName { get; set; }
+
+        /// <summary>
+        /// 巡检周期
+        /// </summary>
+        public string InspectCycles { get; set; }
+
+        /// <summary>
+        /// 周期执行开始时间
+        /// </summary>
+        public DateTime CycleStartTime { get; set; }
+
+        /// <summary>
+        /// 周期执行结束时间
+        /// </summary>
+        public DateTime CycleEndTime { get; set; }
+
+        /// <summary>
+        /// 线路名称
+        /// </summary>
+        public string LineName { get; set; }
 
         /// <summary>
         /// 巡检时间
