@@ -40,7 +40,7 @@ namespace NFCWebApi.Controllers
             string inspectUser = jObject.Value<string>("inspectUser");
 
             //防止查询条件都不满足，先生成一个空的查询
-            var where = (from task in _context.InspectTask.GroupBy(t => new { t.TaskNo, t.TaskName, t.InspectCycles, t.InspectUser, t.InspectTime, t.LineName, t.CycleEndTime, t.CycleStartTime })
+            var where = (from task in _context.InspectTask.GroupBy(t => new { t.TaskNo, t.TaskName, t.InspectCycles, t.InspectUser, t.InspectTime, t.LineName})
                          select new InspectTaskView
                          {
                              TaskNo = task.Key.TaskNo,
@@ -49,8 +49,6 @@ namespace NFCWebApi.Controllers
                              InspectUser = task.Key.InspectUser,
                              LineName = task.Key.LineName,
                              InspectCycles = task.Key.InspectCycles,
-                             CycleStartTime = task.Key.CycleStartTime,
-                             CycleEndTime = task.Key.CycleEndTime,
                              SumCount = _context.InspectTask.Where(p => p.TaskNo.Equals(task.Key.TaskNo)).Count(),
                              IsCompleteCount = _context.InspectTask.Where(p => p.TaskNo.Equals(task.Key.TaskNo) && p.IsComplete.Equals("2")).Count(),
                          }).Where(p => true);
@@ -306,7 +304,8 @@ namespace NFCWebApi.Controllers
                              Unit = inspectItem.Unit,
                              ItemRemark = inspectItem.Remark,
 
-                         }).Where(p => p.IsComplete.Equals("0"));//待下发
+                             //待下发或者待处理的数据都可以请求到,只请求当天的数据
+                         }).Where(p => (p.IsComplete.Equals("0") || p.IsComplete.Equals("1")) && p.InspectTime.Date == DateTime.Now.Date);
 
             if (string.IsNullOrEmpty(taskNo) == false)
             {
@@ -441,6 +440,7 @@ namespace NFCWebApi.Controllers
                         };
             List<InspectTask> taskList = query.ToList();
 
+            List<InspectTask> addList = new List<InspectTask>();
             // 巡检顺序编号
             int taskOrderNo = 0;
             for (int i = 0;i< taskList.Count; i++)
@@ -462,9 +462,10 @@ namespace NFCWebApi.Controllers
                 inspectTaskObj.CreateTime = DateTime.Now;
                 inspectTaskObj.LastUpdateUser = obj.LastUpdateUser;
                 inspectTaskObj.LastUpdateTime = DateTime.Now;
-                _context.InspectTask.Add(inspectTaskObj);
-                _context.SaveChanges();
+                addList.Add(inspectTaskObj);
             }
+            _context.InspectTask.AddRange(addList);
+            _context.SaveChanges();
 
             resultObj.IsSuccess = true;
             return resultObj;
@@ -501,6 +502,7 @@ namespace NFCWebApi.Controllers
                         };
             List<InspectTask> taskList = query.ToList();
 
+            List<InspectTask> addList = new List<InspectTask>();
             // 巡检顺序编号
             int taskOrderNo = 0;
             for (int i = 0; i < taskList.Count; i++)
@@ -524,10 +526,12 @@ namespace NFCWebApi.Controllers
                     inspectTaskObj.CreateTime = DateTime.Now;
                     inspectTaskObj.LastUpdateUser = obj.LastUpdateUser;
                     inspectTaskObj.LastUpdateTime = DateTime.Now;
-                    _context.InspectTask.Add(inspectTaskObj);
-                    _context.SaveChanges();
+                    addList.Add(inspectTaskObj);
                 }
             }
+            _context.InspectTask.AddRange(addList);
+            _context.SaveChanges();
+
             resultObj.IsSuccess = true;
             return resultObj;
         }
@@ -586,7 +590,7 @@ namespace NFCWebApi.Controllers
                         };
             List<InspectTask> taskList = query.ToList();
 
-            
+            List<InspectTask> addList = new List<InspectTask>();
             for (int j = 0; j < inspectTimeList.Count; j++)
             {
                 // 任务编号(按照巡检时间生成任务编号)
@@ -618,11 +622,13 @@ namespace NFCWebApi.Controllers
                         inspectTaskObj.CreateTime = DateTime.Now;
                         inspectTaskObj.LastUpdateUser = obj.LastUpdateUser;
                         inspectTaskObj.LastUpdateTime = DateTime.Now;
-                        _context.InspectTask.Add(inspectTaskObj);
-                        _context.SaveChanges();
+                        addList.Add(inspectTaskObj);
                     }
                 }
             }
+            _context.InspectTask.AddRange(addList);
+            _context.SaveChanges();
+
             resultObj.IsSuccess = true;
             return resultObj;
         }
@@ -667,6 +673,7 @@ namespace NFCWebApi.Controllers
         [HttpPost]
         public IActionResult Delete(DelObj delObj)
         {
+            List<InspectTask> delList = new List<InspectTask>();
             for (int i = 0; i < delObj.gId.Count(); i++)
             {
                 var obj = _context.InspectTask.Find(delObj.gId[i]);
@@ -674,10 +681,10 @@ namespace NFCWebApi.Controllers
                 {
                     return NotFound();
                 }
-
-                _context.InspectTask.Remove(obj);
-                _context.SaveChanges();
+                delList.Add(obj);
             }
+            _context.InspectTask.RemoveRange(delList);
+            _context.SaveChanges();
 
             return NoContent();
         }
@@ -687,17 +694,14 @@ namespace NFCWebApi.Controllers
         [HttpPost]
         public IActionResult DeleteByNo(DelObjStr delObj)
         {
+            List<InspectTask> delList = new List<InspectTask>();
             for (int i = 0; i < delObj.taskNo.Count(); i++)
             {
-                var obj = _context.InspectTask.Where(p=>p.TaskNo.Equals(delObj.taskNo[i]));
-                if (obj == null)
-                {
-                    return NotFound();
-                }
-
-                _context.InspectTask.RemoveRange(obj);
-                _context.SaveChanges();
+                List<InspectTask> list = _context.InspectTask.Where(p=>p.TaskNo.Equals(delObj.taskNo[i])).ToList();
+                delList.AddRange(list);
             }
+            _context.InspectTask.RemoveRange(delList);
+            _context.SaveChanges();
 
             return NoContent();
         }
