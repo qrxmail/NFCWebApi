@@ -20,7 +20,7 @@ namespace NFCWebApi.Controllers
             _context = context;
         }
 
-        // 带多个查询条件的查询
+        // 带多个查询条件的查询：查询巡检任务
         [Route("query")]
         [HttpGet]
         public ActionResult<TableDataInspectTask> Query(string queryStr)
@@ -36,47 +36,24 @@ namespace NFCWebApi.Controllers
             int pageSize = jObject.Value<int>("pageSize") == 0 ? 20 : jObject.Value<int>("pageSize");
             string taskName = jObject.Value<string>("taskName");
             string taskNo = jObject.Value<string>("taskNo");
-            string deviceName = jObject.Value<string>("deviceName");
-            string inspectName = jObject.Value<string>("inspectName");
-            string inspectItemName = jObject.Value<string>("inspectItemName");
             string inspectTime = jObject.Value<string>("inspectTime");
             string inspectUser = jObject.Value<string>("inspectUser");
-            string isComplete = jObject.Value<string>("isComplete");
 
             //防止查询条件都不满足，先生成一个空的查询
-            var where = (from task in _context.InspectTask
-                        join inspect in _context.Inspect on task.InspectNo equals inspect.InspectNo
-                        join device in _context.Device on task.DeviceNo equals device.DeviceNo
-                        join nfcCard in _context.NFCCard on device.DeviceNo equals nfcCard.DeviceNo
-                        join inspectItem in _context.InspectItems on task.InspectItemNo equals inspectItem.InspectItemNo
-                        select new InspectTaskView
-                        {
-                            GId = task.GId,
-                            InspectNo = task.InspectNo,
-                            DeviceNo = task.DeviceNo,
-                            InspectItemNo = task.InspectItemNo,
-                            TaskOrderNo = task.TaskOrderNo,
-                            TaskNo = task.TaskNo,
-                            TaskName = task.TaskName,
-                            InspectTime = task.InspectTime,
-                            InspectUser = task.InspectUser,
-                            IsComplete = task.IsComplete,
-                            InspectCompleteTime = task.InspectCompleteTime,
-                            InspectCompleteUser = task.InspectCompleteUser,
-                            Remark = task.Remark,
-                            CreateTime = task.CreateTime,
-                            CreateUser = task.CreateUser,
-                            LastUpdateTime = task.LastUpdateTime,
-                            LastUpdateUser = task.LastUpdateUser,
-
-                            InspectName = inspect.InspectName,
-                            DeviceName = device.DeviceName,
-                            InspectItemName = inspectItem.InspectItemName,
-                            NfcCardNo = nfcCard.NFCCardNo,
-                            Unit = inspectItem.Unit,
-                            ItemRemark = inspectItem.Remark,
-
-                        }).Where(p => true);
+            var where = (from task in _context.InspectTask.GroupBy(t => new { t.TaskNo, t.TaskName, t.InspectCycles, t.InspectUser, t.InspectTime, t.LineName, t.CycleEndTime, t.CycleStartTime })
+                         select new InspectTaskView
+                         {
+                             TaskNo = task.Key.TaskNo,
+                             TaskName = task.Key.TaskName,
+                             InspectTime = task.Key.InspectTime,
+                             InspectUser = task.Key.InspectUser,
+                             LineName = task.Key.LineName,
+                             InspectCycles = task.Key.InspectCycles,
+                             CycleStartTime = task.Key.CycleStartTime,
+                             CycleEndTime = task.Key.CycleEndTime,
+                             SumCount = _context.InspectTask.Where(p => p.TaskNo.Equals(task.Key.TaskNo)).Count(),
+                             IsCompleteCount = _context.InspectTask.Where(p => p.TaskNo.Equals(task.Key.TaskNo) && p.IsComplete.Equals("2")).Count(),
+                         }).Where(p => true);
 
             if (string.IsNullOrEmpty(taskNo) == false)
             {
@@ -85,18 +62,6 @@ namespace NFCWebApi.Controllers
             if (string.IsNullOrEmpty(taskName) == false)
             {
                 where = where.Where(p => p.TaskName.Contains(taskName));
-            }
-            if (string.IsNullOrEmpty(inspectName) == false)
-            {
-                where = where.Where(p => p.InspectName.Contains(inspectName));
-            }
-            if (string.IsNullOrEmpty(deviceName) == false)
-            {
-                where = where.Where(p => p.DeviceName.Contains(deviceName));
-            }
-            if (string.IsNullOrEmpty(inspectItemName) == false)
-            {
-                where = where.Where(p => p.InspectItemName.Contains(inspectItemName));
             }
             if (string.IsNullOrEmpty(inspectTime) == false)
             {
@@ -109,10 +74,7 @@ namespace NFCWebApi.Controllers
             {
                 where = where.Where(p => p.InspectUser.Contains(inspectUser));
             }
-            if (string.IsNullOrEmpty(isComplete) == false)
-            {
-                where = where.Where(p => p.IsComplete.Equals(isComplete));
-            }
+           
 
             //统计总记录数
             int total = where.Count();
@@ -138,6 +100,124 @@ namespace NFCWebApi.Controllers
                 {
                     where = where.OrderBy(p => p.InspectTime);
                 }
+            }
+            else
+            {
+                //默认结果按照任务编号、任务顺序号正序排序
+                where = where.OrderBy(p => p.TaskNo);
+            }
+           
+            //跳过翻页的数量
+            where = where.Skip(pageSize * (current - 1));
+            //获取结果
+            List<InspectTaskView> dataList = where.Take(pageSize).ToList();
+
+            TableDataInspectTask resultObj = new TableDataInspectTask();
+            resultObj.Data = dataList;
+            resultObj.Current = current;
+            resultObj.Success = true;
+            resultObj.PageSize = pageSize;
+            resultObj.Total = total;
+
+            return resultObj;
+        }
+
+        // 查询巡检任务详情
+        [Route("querydetail")]
+        [HttpGet]
+        public ActionResult<TableDataInspectTask> QueryDetail(string queryStr)
+        {
+
+            JObject jObject = new JObject();
+            if (string.IsNullOrEmpty(queryStr) == false)
+            {
+                jObject = JsonConvert.DeserializeObject<JObject>(queryStr);
+            }
+
+            int current = jObject.Value<int>("current") == 0 ? 1 : jObject.Value<int>("current");
+            int pageSize = jObject.Value<int>("pageSize") == 0 ? 20 : jObject.Value<int>("pageSize");
+            string taskName = jObject.Value<string>("taskName");
+            string taskNo = jObject.Value<string>("taskNo");
+            string deviceName = jObject.Value<string>("deviceName");
+            string inspectName = jObject.Value<string>("inspectName");
+            string inspectItemName = jObject.Value<string>("inspectItemName");
+            string isComplete = jObject.Value<string>("isComplete");
+
+            //防止查询条件都不满足，先生成一个空的查询
+            var where = (from task in _context.InspectTask
+                         join inspect in _context.Inspect on task.InspectNo equals inspect.InspectNo
+                         join device in _context.Device on task.DeviceNo equals device.DeviceNo
+                         join nfcCard in _context.NFCCard on device.DeviceNo equals nfcCard.DeviceNo
+                         join inspectItem in _context.InspectItems on task.InspectItemNo equals inspectItem.InspectItemNo
+                         select new InspectTaskView
+                         {
+                             GId = task.GId,
+                             InspectNo = task.InspectNo,
+                             DeviceNo = task.DeviceNo,
+                             InspectItemNo = task.InspectItemNo,
+                             TaskOrderNo = task.TaskOrderNo,
+                             TaskNo = task.TaskNo,
+                             TaskName = task.TaskName,
+                             InspectTime = task.InspectTime,
+                             InspectUser = task.InspectUser,
+                             IsComplete = task.IsComplete,
+                             InspectCompleteTime = task.InspectCompleteTime,
+                             InspectCompleteUser = task.InspectCompleteUser,
+                             Remark = task.Remark,
+                             CreateTime = task.CreateTime,
+                             CreateUser = task.CreateUser,
+                             LastUpdateTime = task.LastUpdateTime,
+                             LastUpdateUser = task.LastUpdateUser,
+
+                             InspectName = inspect.InspectName,
+                             DeviceName = device.DeviceName,
+                             InspectItemName = inspectItem.InspectItemName,
+                             NfcCardNo = nfcCard.NFCCardNo,
+                             Unit = inspectItem.Unit,
+                             ItemRemark = inspectItem.Remark,
+
+                         }).Where(p => true);
+
+            if (string.IsNullOrEmpty(taskNo) == false)
+            {
+                where = where.Where(p => p.TaskNo.Contains(taskNo));
+            }
+            if (string.IsNullOrEmpty(taskName) == false)
+            {
+                where = where.Where(p => p.TaskName.Contains(taskName));
+            }
+            if (string.IsNullOrEmpty(inspectName) == false)
+            {
+                where = where.Where(p => p.InspectName.Contains(inspectName));
+            }
+            if (string.IsNullOrEmpty(deviceName) == false)
+            {
+                where = where.Where(p => p.DeviceName.Contains(deviceName));
+            }
+            if (string.IsNullOrEmpty(inspectItemName) == false)
+            {
+                where = where.Where(p => p.InspectItemName.Contains(inspectItemName));
+            }
+            if (string.IsNullOrEmpty(isComplete) == false)
+            {
+                where = where.Where(p => p.IsComplete.Equals(isComplete));
+            }
+
+            //统计总记录数
+            int total = where.Count();
+
+            // 解析排序规则
+            string sorterKey = "";
+            string sortRule = "";
+            JObject sorterObj = jObject.Value<JObject>("sorter");
+            IEnumerable<JProperty> properties = sorterObj.Properties();
+            foreach (JProperty item in properties)
+            {
+                sorterKey = item.Name;
+                sortRule = item.Value.ToString();
+            }
+            if (string.IsNullOrEmpty(sorterKey) == false && string.IsNullOrEmpty(sortRule) == false)
+            {
                 // 按照巡检完成时间排序
                 if (sorterKey.Equals("inspectCompleteTime") && sortRule.Equals("descend"))
                 {
@@ -153,7 +233,7 @@ namespace NFCWebApi.Controllers
                 //默认结果按照任务编号、任务顺序号正序排序
                 where = where.OrderBy(p => p.TaskNo).ThenBy(p => p.TaskOrderNo);
             }
-           
+
             //跳过翻页的数量
             where = where.Skip(pageSize * (current - 1));
             //获取结果
@@ -214,6 +294,10 @@ namespace NFCWebApi.Controllers
                              CreateUser = task.CreateUser,
                              LastUpdateTime = task.LastUpdateTime,
                              LastUpdateUser = task.LastUpdateUser,
+                             LineName = task.LineName,
+                             InspectCycles = task.InspectCycles,
+                             CycleStartTime = task.CycleStartTime,
+                             CycleEndTime = task.CycleEndTime,
 
                              InspectName = inspect.InspectName,
                              DeviceName = device.DeviceName,
@@ -222,7 +306,7 @@ namespace NFCWebApi.Controllers
                              Unit = inspectItem.Unit,
                              ItemRemark = inspectItem.Remark,
 
-                         }).Where(p => p.IsComplete.Equals("0"));
+                         }).Where(p => p.IsComplete.Equals("0"));//待下发
 
             if (string.IsNullOrEmpty(taskNo) == false)
             {
@@ -260,6 +344,22 @@ namespace NFCWebApi.Controllers
             where = where.OrderBy(p => p.TaskNo).ThenBy(p => p.TaskOrderNo);
             //获取结果
             List<InspectTaskView> dataList = where.ToList();
+
+            // 批量更新任务状态：待完成1
+            List<InspectTask> updateList = new List<InspectTask>();
+            for (int i = 0; i < dataList.Count; i++)
+            {
+                InspectTask updateObj = _context.InspectTask.Find(dataList[i].GId);
+                if (updateObj != null)
+                {
+                    updateObj.IsComplete = "1";//待完成
+                    updateObj.LastUpdateTime = DateTime.Now;
+                    updateObj.LastUpdateUser = inspectUser;
+                    updateList.Add(updateObj);
+                }
+            }
+            _context.InspectTask.UpdateRange(updateList);
+            _context.SaveChanges();
 
             return dataList;
         }
@@ -320,54 +420,11 @@ namespace NFCWebApi.Controllers
         }
 
 
-        // 新增批量巡检任务
+        // 新增批量巡检任务（所有巡检点）
         [Route("addbatchtask")]
         [HttpPost]
         public ResultObj AddBatchTask(InspectTask obj)
         {
-            //// 先获取所有的巡检点(根据巡检点的顺序号生成)
-            //List<Inspect> inspectList = _context.Inspect.OrderBy(p => p.InspectOrderNo).ToList();
-
-            //// 巡检顺序编号
-            //int taskOrderNo = 0;
-            //// 遍历巡检点，获取巡检点下的设备
-            //for (int i = 0; i < inspectList.Count; i++)
-            //{
-            //    Inspect inspectObj = inspectList[i];
-            //    List<Device> deviceList = _context.Device.Where(p => p.InspectionNo.Equals(inspectObj.InspectNo)).OrderBy(p => p.DeviceNo).ToList();
-
-            //    // 遍历设备，获取设备的巡检项目
-            //    for (int j = 0; j < deviceList.Count; j++)
-            //    {
-            //        Device deviceObj = deviceList[j];
-            //        List<DeviceInspectItem> deviceInspectItemList = _context.DeviceInspectItem.Where(p => p.DeviceNo.Equals(deviceObj.DeviceNo)).OrderBy(p => p.InspectItemNo).ToList();
-
-            //        // 遍历设备的巡检项目，新增任务
-            //        for (int k = 0; k < deviceInspectItemList.Count; k++)
-            //        {
-            //            taskOrderNo++;
-            //            string inspectItemNo = deviceInspectItemList[k].InspectItemNo;
-            //            InspectTask inspectTaskObj = new InspectTask();
-            //            inspectTaskObj.InspectNo = inspectObj.InspectNo;
-            //            inspectTaskObj.DeviceNo = deviceObj.DeviceNo;
-            //            inspectTaskObj.InspectItemNo = inspectItemNo;
-            //            inspectTaskObj.TaskOrderNo = taskOrderNo.ToString();
-            //            inspectTaskObj.TaskName = obj.TaskName;
-            //            inspectTaskObj.TaskNo = obj.TaskNo;
-            //            inspectTaskObj.InspectTime = obj.InspectTime;
-            //            inspectTaskObj.InspectUser = obj.InspectUser;
-            //            inspectTaskObj.IsComplete = "0";
-            //            inspectTaskObj.Remark = obj.Remark;
-            //            inspectTaskObj.CreateUser = obj.CreateUser;
-            //            inspectTaskObj.CreateTime = DateTime.Now;
-            //            inspectTaskObj.LastUpdateUser = obj.LastUpdateUser;
-            //            inspectTaskObj.LastUpdateTime = DateTime.Now;
-            //            _context.InspectTask.Add(obj);
-            //            _context.SaveChanges();
-            //        }
-            //    }
-            //}
-
             ResultObj resultObj = new ResultObj();
 
             // 根据设备巡检项目表，先查询需要生成的任务数据
@@ -382,19 +439,6 @@ namespace NFCWebApi.Controllers
                             DeviceNo = device.DeviceNo,
                             InspectItemNo = deviceInspectItem.InspectItemNo
                         };
-
-            //// 根据巡检点表，查询需要生成的任务数据
-            //var query = from inspect in _context.Inspect
-            //            join device in _context.Device on inspect.InspectNo equals device.InspectionNo
-            //            join deviceInspectItem in _context.DeviceInspectItem on device.DeviceNo equals deviceInspectItem.DeviceNo
-            //            join InspectItems in _context.InspectItems on deviceInspectItem.InspectItemNo equals InspectItems.InspectItemNo
-            //            orderby inspect.InspectOrderNo, device.DeviceNo, InspectItems.InspectItemNo
-            //            select new InspectTask
-            //            {
-            //                InspectNo = inspect.InspectNo,
-            //                DeviceNo = device.DeviceNo,
-            //                InspectItemNo = InspectItems.InspectItemNo
-            //            };
             List<InspectTask> taskList = query.ToList();
 
             // 巡检顺序编号
@@ -408,8 +452,8 @@ namespace NFCWebApi.Controllers
                 inspectTaskObj.DeviceNo = taskList[i].DeviceNo;
                 inspectTaskObj.InspectItemNo = taskList[i].InspectItemNo;
                 inspectTaskObj.TaskOrderNo = taskOrderNo;
-                inspectTaskObj.TaskName = obj.TaskName;
-                inspectTaskObj.TaskNo = string.Format("{0:yyyyMMddHHmmss}", DateTime.Now);
+                inspectTaskObj.TaskName = string.Format("{0:yyyyMMddHH}", obj.InspectTime) + "全巡检点任务";
+                inspectTaskObj.TaskNo = string.Format("{0:yyyyMMddHH}", obj.InspectTime) + "ALL"; 
                 inspectTaskObj.InspectTime = obj.InspectTime;
                 inspectTaskObj.InspectUser = obj.InspectUser;
                 inspectTaskObj.IsComplete = "0";
@@ -426,16 +470,21 @@ namespace NFCWebApi.Controllers
             return resultObj;
         }
 
-        // 新增巡检任务(选择巡检周期、巡检路线)
-        [Route("addlinetask")]
+        // 新增临时巡检任务（选择巡检路线）
+        [Route("addtemptask")]
         [HttpPost]
-        public ResultObj AddLineTask(InspectTask obj)
+        public ResultObj AddTempTask(InspectTask obj)
         {
             ResultObj resultObj = new ResultObj();
 
-            // 根据巡检周期，周期起始、结束时间，计算需要生成的任务条数
-
             // 根据巡检路线，计算出巡检任务的巡检项目
+            InspectLine inspectLine = _context.InspectLine.Where(p => p.LineName.Equals(obj.LineName)).FirstOrDefault();
+            string[] lineDeviceItem = inspectLine.DeviceInspectItems.Split(",");
+            List<Guid> lineDeviceItemList = new List<Guid>();
+            for (int i = 0; i < lineDeviceItem.Length; i++)
+            {
+                lineDeviceItemList.Add(new Guid(lineDeviceItem[i]));
+            }
 
             // 根据设备巡检项目表，先查询需要生成的任务数据
             var query = from deviceInspectItem in _context.DeviceInspectItem
@@ -447,7 +496,8 @@ namespace NFCWebApi.Controllers
                         {
                             InspectNo = device.InspectNo,
                             DeviceNo = device.DeviceNo,
-                            InspectItemNo = deviceInspectItem.InspectItemNo
+                            InspectItemNo = deviceInspectItem.InspectItemNo,
+                            GId = deviceInspectItem.GId,
                         };
             List<InspectTask> taskList = query.ToList();
 
@@ -455,27 +505,124 @@ namespace NFCWebApi.Controllers
             int taskOrderNo = 0;
             for (int i = 0; i < taskList.Count; i++)
             {
+                if (lineDeviceItemList.Contains(taskList[i].GId))
+                {
+                    taskOrderNo++;
+                    InspectTask inspectTaskObj = new InspectTask();
+                    inspectTaskObj.InspectNo = taskList[i].InspectNo;
+                    inspectTaskObj.DeviceNo = taskList[i].DeviceNo;
+                    inspectTaskObj.InspectItemNo = taskList[i].InspectItemNo;
+                    inspectTaskObj.TaskOrderNo = taskOrderNo;
+                    inspectTaskObj.TaskName = string.Format("{0:yyyyMMddHH}", obj.InspectTime) + "临时任务";
+                    inspectTaskObj.TaskNo = string.Format("{0:yyyyMMddHH}", obj.InspectTime)+"TEMP";
+                    inspectTaskObj.InspectTime = obj.InspectTime;
+                    inspectTaskObj.InspectUser = obj.InspectUser;
+                    inspectTaskObj.LineName = obj.LineName;
+                    inspectTaskObj.IsComplete = "0";
+                    inspectTaskObj.Remark = obj.Remark;
+                    inspectTaskObj.CreateUser = obj.CreateUser;
+                    inspectTaskObj.CreateTime = DateTime.Now;
+                    inspectTaskObj.LastUpdateUser = obj.LastUpdateUser;
+                    inspectTaskObj.LastUpdateTime = DateTime.Now;
+                    _context.InspectTask.Add(inspectTaskObj);
+                    _context.SaveChanges();
+                }
+            }
+            resultObj.IsSuccess = true;
+            return resultObj;
+        }
 
-                taskOrderNo++;
-                InspectTask inspectTaskObj = new InspectTask();
-                inspectTaskObj.InspectNo = taskList[i].InspectNo;
-                inspectTaskObj.DeviceNo = taskList[i].DeviceNo;
-                inspectTaskObj.InspectItemNo = taskList[i].InspectItemNo;
-                inspectTaskObj.TaskOrderNo = taskOrderNo;
-                inspectTaskObj.TaskName = obj.TaskName;
-                inspectTaskObj.TaskNo = string.Format("{0:yyyyMMddHHmmss}", DateTime.Now);
-                inspectTaskObj.InspectTime = obj.InspectTime;
-                inspectTaskObj.InspectUser = obj.InspectUser;
-                inspectTaskObj.IsComplete = "0";
-                inspectTaskObj.Remark = obj.Remark;
-                inspectTaskObj.CreateUser = obj.CreateUser;
-                inspectTaskObj.CreateTime = DateTime.Now;
-                inspectTaskObj.LastUpdateUser = obj.LastUpdateUser;
-                inspectTaskObj.LastUpdateTime = DateTime.Now;
-                _context.InspectTask.Add(inspectTaskObj);
-                _context.SaveChanges();
+        // 新增巡检任务(选择巡检周期、巡检路线)
+        [Route("addlinetask")]
+        [HttpPost]
+        public ResultObj AddLineTask(InspectTask obj)
+        {
+            ResultObj resultObj = new ResultObj();
+
+            // 根据巡检周期，周期起始、结束时间，计算需要生成的任务巡检时间数组
+            List<DateTime> inspectTimeList = new List<DateTime>();
+
+            // 如果选择的开始时间小于当前时间，则取当前时间
+            DateTime startTime = obj.CycleStartTime < DateTime.Now ? DateTime.Now.AddHours(1) : obj.CycleStartTime.Date;
+            // 偶数整点开始执行
+            int startHour = (startTime.Hour) % 2 == 0 ? startTime.Hour : startTime.Hour + 1;
+            startTime = DateTime.Parse(string.Format("{0:yyyy/MM/dd }",startTime) + startHour + ":00:00");
+
+            // 如果结束时间小于开始时间，则取开始时间
+            DateTime endTime = obj.CycleEndTime < startTime ? startTime : obj.CycleEndTime;
+            // 结束日期后一天的0点为周期的结束时间
+            endTime = DateTime.Parse(string.Format("{0:yyyy/MM/dd }", endTime.AddDays(1)) + "00:00:00");
+
+            while (startTime < endTime)
+            {
+                inspectTimeList.Add(startTime);
+                if (obj.InspectCycles.Equals("每两小时巡检一次"))
+                {
+                    startTime = startTime.AddHours(2);
+                }
             }
 
+            // 根据巡检路线，计算出巡检任务的巡检项目
+            InspectLine inspectLine = _context.InspectLine.Where(p=>p.LineName.Equals(obj.LineName)).FirstOrDefault();
+            string[] lineDeviceItem = inspectLine.DeviceInspectItems.Split(",");
+            List<Guid> lineDeviceItemList = new List<Guid>();
+            for (int i = 0; i < lineDeviceItem.Length; i++)
+            {
+                lineDeviceItemList.Add(new Guid(lineDeviceItem[i]));
+            }
+
+            // 根据设备巡检项目表，先查询需要生成的任务数据
+            var query = from deviceInspectItem in _context.DeviceInspectItem
+                        join device in _context.Device on deviceInspectItem.DeviceNo equals device.DeviceNo
+                        join nfcCard in _context.NFCCard on device.DeviceNo equals nfcCard.DeviceNo
+                        join inspect in _context.Inspect on device.InspectNo equals inspect.InspectNo
+                        orderby inspect.InspectOrderNo, device.DeviceNo, deviceInspectItem.InspectItemNo
+                        select new InspectTask
+                        {
+                            InspectNo = device.InspectNo,
+                            DeviceNo = device.DeviceNo,
+                            InspectItemNo = deviceInspectItem.InspectItemNo,
+                            GId = deviceInspectItem.GId,
+                        };
+            List<InspectTask> taskList = query.ToList();
+
+            
+            for (int j = 0; j < inspectTimeList.Count; j++)
+            {
+                // 任务编号(按照巡检时间生成任务编号)
+                string taskNo = string.Format("{0:yyyyMMddHH}", inspectTimeList[j]) + "CYCLE"; ;
+                string taskName = string.Format("{0:yyyyMMddHH}", inspectTimeList[j])+"定期任务";
+                // 巡检顺序编号
+                int taskOrderNo = 0;
+                for (int i = 0; i < taskList.Count; i++)
+                {
+                    if (lineDeviceItemList.Contains(taskList[i].GId))
+                    {
+                        taskOrderNo++;
+                        InspectTask inspectTaskObj = new InspectTask();
+                        inspectTaskObj.InspectNo = taskList[i].InspectNo;
+                        inspectTaskObj.DeviceNo = taskList[i].DeviceNo;
+                        inspectTaskObj.InspectItemNo = taskList[i].InspectItemNo;
+                        inspectTaskObj.TaskOrderNo = taskOrderNo;
+                        inspectTaskObj.TaskName = taskName;
+                        inspectTaskObj.TaskNo = taskNo;
+                        inspectTaskObj.LineName = obj.LineName;
+                        inspectTaskObj.InspectCycles = obj.InspectCycles;
+                        inspectTaskObj.CycleStartTime = obj.CycleStartTime;
+                        inspectTaskObj.CycleEndTime = obj.CycleEndTime;
+                        inspectTaskObj.InspectTime = inspectTimeList[j];
+                        inspectTaskObj.InspectUser = obj.InspectUser;
+                        inspectTaskObj.IsComplete = "0";
+                        inspectTaskObj.Remark = obj.Remark;
+                        inspectTaskObj.CreateUser = obj.CreateUser;
+                        inspectTaskObj.CreateTime = DateTime.Now;
+                        inspectTaskObj.LastUpdateUser = obj.LastUpdateUser;
+                        inspectTaskObj.LastUpdateTime = DateTime.Now;
+                        _context.InspectTask.Add(inspectTaskObj);
+                        _context.SaveChanges();
+                    }
+                }
+            }
             resultObj.IsSuccess = true;
             return resultObj;
         }
@@ -496,7 +643,7 @@ namespace NFCWebApi.Controllers
             }
 
             //obj.TaskNo = newObj.TaskNo;
-            obj.TaskName = newObj.TaskName;
+            //obj.TaskName = newObj.TaskName;
             obj.TaskOrderNo = newObj.TaskOrderNo;
             obj.DeviceNo = newObj.DeviceNo;
             obj.InspectItemNo = newObj.InspectItemNo;
@@ -534,5 +681,27 @@ namespace NFCWebApi.Controllers
 
             return NoContent();
         }
+
+        // 根据任务编号删除
+        [Route("deletebyno")]
+        [HttpPost]
+        public IActionResult DeleteByNo(DelObjStr delObj)
+        {
+            for (int i = 0; i < delObj.taskNo.Count(); i++)
+            {
+                var obj = _context.InspectTask.Where(p=>p.TaskNo.Equals(delObj.taskNo[i]));
+                if (obj == null)
+                {
+                    return NotFound();
+                }
+
+                _context.InspectTask.RemoveRange(obj);
+                _context.SaveChanges();
+            }
+
+            return NoContent();
+        }
+
+        
     }
 }

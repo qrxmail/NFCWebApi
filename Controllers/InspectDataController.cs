@@ -193,11 +193,11 @@ namespace NFCWebApi.Controllers
             // 如果未跳检，则更新巡检任务表
             if (taskObj != null && obj.IsJumpInspect.Equals("0"))
             {
-                //taskObj.InspectCompleteTime = obj.InspectTime;
-                //taskObj.InspectCompleteUser = obj.InspectUser;
-                //taskObj.IsComplete = "1";
-                //_context.InspectTask.Update(taskObj);
-                //_context.SaveChanges();
+                taskObj.InspectCompleteTime = obj.InspectTime;
+                taskObj.InspectCompleteUser = obj.InspectUser;
+                taskObj.IsComplete = "2";
+                _context.InspectTask.Update(taskObj);
+                _context.SaveChanges();
 
                 // 更新nfc卡的最后巡检时间
                 List<NFCCard> nfcCardList = _context.NFCCard.Where(p=>p.DeviceNo.Equals(obj.DeviceNo)).ToList();

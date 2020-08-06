@@ -101,6 +101,9 @@ namespace NFCWebApi.Models
         public string NfcCardNo { get; set; }
         public string Unit { get; set; }
         public string ItemRemark { get; set; }
+
+        public int SumCount { get; set; }
+        public int IsCompleteCount { get; set; }
     }
 
 
@@ -127,6 +130,11 @@ namespace NFCWebApi.Models
     public class DelObj
     {
         public List<Guid> gId { get; set; }
+    }
+
+    public class DelObjStr
+    {
+        public List<string>  taskNo { get; set; }
     }
 
     /// <summary>
